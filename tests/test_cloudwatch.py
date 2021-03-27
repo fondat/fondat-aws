@@ -3,9 +3,12 @@ import pytest
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from fondat.aws import Client, Config
-from fondat.aws.cloudwatch import cloudwatch_resource
+import fondat.aws.cloudwatch as cw
+from fondat.aws.cloudwatch import CloudWatchMonitor
 from fondat.error import NotFoundError
 from fondat.monitoring import Measurement, Counter, Gauge, Absolute
+from uuid import uuid4
+
 
 pytestmark = pytest.mark.asyncio
 
@@ -26,19 +29,29 @@ async def client():
 
 @pytest.fixture(scope="function")
 async def metric_type(client):
+    metric = cw.Metric(
+        name="operation_requests_per_second",
+        dimensions={"tenant_id": str(uuid4())},
+        value=1234,
+        timestamp=datetime.now(tz=timezone.utc),
+        unit="Count",
+    )
+    yield metric
+
+
+@pytest.fixture(scope="function")
+async def measurement_type(client):
     _now = lambda: datetime.now(tz=timezone.utc)
     _tags = {"name": "test"}
-    type_name = Measurement(tags=_tags, timestamp=_now(), type="counter", value=1)
-    yield type_name
+    measurement = Measurement(tags=_tags, timestamp=_now(), type="counter", value=1)
+    yield measurement
 
 
 async def test_put_metric(client, metric_type):
-    assert metric_type.type == "counter"
-    cw = cloudwatch_resource(client=client)
-    await cw.put_metric(metric_type)
+    resource = cw.cloudwatch_resource(client=client).namespace("Mperativ/Tripper")
+    await resource.post(metrics=[metric_type])
 
 
-async def test_put_alarm(client, metric_type, threshold=1):
-    assert metric_type.type == "counter"
-    cw = cloudwatch_resource(client=client)
-    await cw.put_alarm(metric_type, threshold)
+async def test_put_monitor(client, measurement_type):
+    cwm = CloudWatchMonitor(client=client, namespace="Mperativ/Tripper")
+    await cwm.record(measurement_type)

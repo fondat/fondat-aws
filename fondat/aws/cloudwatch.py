@@ -138,5 +138,35 @@ class CloudWatchMonitor:
 
     async def record(self, measurement: Measurement):
         """Record a measurement."""
-        raise NotImplementedError
-        # resource.metrics.post(...)
+        if measurement.type == "counter":
+
+            metric = Metric(
+                name=measurement.tags["name"],
+                dimensions={"Name": measurement.type, "Value": str(measurement.value)},
+                timestamp=measurement.timestamp,
+                value=float(measurement.value),
+                unit="Count",
+            )
+        elif measurement.type == "gauge":
+            metric = Metric(
+                name=measurement.tags["name"],
+                dimensions={"Name": measurement.type, "Value": str(measurement.value)},
+                timestamp=measurement.timestamp,
+                value=Statistics(
+                    count=float(measurement.count),
+                    sum=float(measurement.sum),
+                    minimum=float(measurement.min),
+                    maximum=float(measurement.max),
+                ),
+            )
+        elif measurement.type == "absolute":
+
+            metric = Metric(
+                name=measurement.tags["name"],
+                dimensions={"Name": measurement.type, "Value": str(measurement.value)},
+                timestamp=measurement.timestamp,
+                value=float(measurement.value),
+                unit="Count",
+            )
+
+        await self.resource.post(metrics=[metric])
