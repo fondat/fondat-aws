@@ -138,35 +138,39 @@ class CloudWatchMonitor:
 
     async def record(self, measurement: Measurement):
         """Record a measurement."""
-        if measurement.type == "counter":
 
+        if measurement.type == "counter":
+            m = Counter(timestamp=measurement.timestamp)
+            m.record(measurement.value)
             metric = Metric(
                 name=measurement.tags["name"],
-                dimensions={"Name": measurement.type, "Value": str(measurement.value)},
+                dimensions={"Name": measurement.type, "Value": str(m.value)},
                 timestamp=measurement.timestamp,
-                value=float(measurement.value),
+                value=float(m.value),
                 unit="Count",
             )
         elif measurement.type == "gauge":
+            m = Gauge(timestamp=measurement.timestamp)
+            m.record(measurement.value)
             metric = Metric(
                 name=measurement.tags["name"],
                 dimensions={"Name": measurement.type, "Value": str(measurement.value)},
                 timestamp=measurement.timestamp,
                 value=Statistics(
-                    count=float(measurement.count),
-                    sum=float(measurement.sum),
-                    minimum=float(measurement.min),
-                    maximum=float(measurement.max),
+                    count=float(m.count),
+                    sum=float(m.sum),
+                    minimum=float(m.min),
+                    maximum=float(m.max),
                 ),
             )
         elif measurement.type == "absolute":
-
+            m = Absolute(timestamp=measurement.timestamp)
+            m.record(measurement.value)
             metric = Metric(
                 name=measurement.tags["name"],
-                dimensions={"Name": measurement.type, "Value": str(measurement.value)},
+                dimensions={"Name": measurement.type, "Value": str(m.value)},
                 timestamp=measurement.timestamp,
-                value=float(measurement.value),
-                unit="Count",
+                value=float(m.value),
             )
 
         await self.resource.post(metrics=[metric])
