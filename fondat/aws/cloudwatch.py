@@ -130,7 +130,6 @@ class CloudWatchMonitor:
     A monitor that stores all recorded measurements in CloudWatch.
     """
 
-    # now: just do one-to-one (immediately post the metric to AWS cloudwatch)
     # future: collect metrics, send in batches
 
     def __init__(self, client: Client, namespace: str):
