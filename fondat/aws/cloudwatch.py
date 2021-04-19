@@ -1,3 +1,5 @@
+"""Fondat module for AWS CloudWatch."""
+
 import aiobotocore
 import fondat.codec
 import fondat.pagination
@@ -55,6 +57,15 @@ Values = dict[Union[int, float], Union[int, float]]  # value: count
 
 @datacls
 class Statistics:
+    """
+    Statistics measurement type.
+    Attributes:
+    • count: count of measured values
+    • sum: sum of all measured values
+    • minimum: minimum measured value
+    • maximum: maximum measured value
+    """
+
     count: Union[int, float]
     sum: Union[int, float]
     minimum: Union[int, float]
@@ -63,6 +74,17 @@ class Statistics:
 
 @datacls
 class Metric:
+    """
+    CloudWatch metric type.
+    Attributes:
+    • name: name of the CloudWatch metric
+    • dimensions: name/value pair of categories for characteristics
+    • value: value of measurement
+    • timestamp: date and time of the measurement to record
+    • unit: Optional[Unit]
+    • resolution: granularity of the metric
+    """
+
     name: str
     dimensions: dict[str, str]
     value: Union[Value, Values, Statistics]
@@ -76,11 +98,19 @@ def cloudwatch_resource(
     client: Client,
     policies: Iterable[Policy] = None,
 ):
+    """
+    Create CloudWatch resource.
+    Parameters:
+    • client: CloudWatch client object
+    • security: security requirements to apply to all operations
+    """
     if client.service_name != "cloudwatch":
         raise TypeError("expecting cloudwatch client")
 
     @resource
     class NamespaceResource:
+        """ Create Namespace resource. """
+
         def __init__(self, name: str):
             self.name = name
 
@@ -119,6 +149,8 @@ def cloudwatch_resource(
 
     @resource
     class CloudWatchResource:
+        """ Create CloudWatch resource. """
+
         def namespace(self, name: str) -> NamespaceResource:
             return NamespaceResource(name)
 

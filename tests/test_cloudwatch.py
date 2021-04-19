@@ -62,6 +62,14 @@ async def measurement_gauge(client):
     yield measurement
 
 
+@pytest.fixture(scope="function")
+async def measurement_gauge_1(client):
+    _now = lambda: datetime.now(tz=timezone.utc)
+    _tags = {"name": "test"}
+    measurement = Measurement(tags=_tags, timestamp=_now(), type="gauge", value=2)
+    yield measurement
+
+
 async def test_put_metric(client, metric_type):
     resource = cw.cloudwatch_resource(client=client).namespace("Mperativ/Tripper")
     await resource.post(metrics=[metric_type])
@@ -77,6 +85,7 @@ async def test_put_absolute(client, measurement_absolute):
     await cwm.record(measurement_absolute)
 
 
-async def test_put_gauge(client, measurement_gauge):
+async def test_put_gauge(client, measurement_gauge, measurement_gauge_1):
     cwm = CloudWatchMonitor(client=client, namespace="Mperativ/Tripper")
     await cwm.record(measurement_gauge)
+    await cwm.record(measurement_gauge_1)
