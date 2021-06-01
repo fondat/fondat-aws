@@ -6,6 +6,8 @@ from fondat.aws.ses import EmailRecipient, ses_resource
 
 pytestmark = pytest.mark.asyncio
 
+# Run the following line before pytest
+# aws ses verify-email-identity --email-address test@test.io --region us-east-1 --profile localstack --endpoint-url=http://localhost:4566
 config = Config(
     endpoint_url="http://localhost:4566",
     aws_access_key_id="id",
@@ -46,4 +48,4 @@ async def test_send(client):
         text_pram={"test": "test"},
     )
 
-    assert response["HTTPStatusCode"] == 200
+    assert response['ResponseMetadata']["HTTPStatusCode"] == 200
