@@ -1,6 +1,5 @@
 import pytest
 
-from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from fondat.aws import Client, Config
 import fondat.aws.cloudwatch as cw

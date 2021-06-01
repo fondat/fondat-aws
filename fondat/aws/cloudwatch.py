@@ -10,12 +10,12 @@ from collections.abc import Iterable
 from datetime import datetime
 from fondat.aws import Client
 from fondat.codec import Binary, String
+from fondat.data import datacls
 from fondat.error import InternalServerError, NotFoundError
 from fondat.resource import resource, operation, mutation
-from fondat.security import SecurityRequirement
+from fondat.security import Policy
 from typing import Any, Literal, Optional, Union
 from fondat.monitoring import Measurement, Counter, Gauge, Absolute
-from fondat.types import datacls
 
 
 _logger = logging.getLogger(__name__)
@@ -96,7 +96,7 @@ class Metric:
 def cloudwatch_resource(
     *,
     client: Client,
-    security: Iterable[SecurityRequirement] = None,
+    policies: Iterable[Policy] = None,
 ):
     """
     Create CloudWatch resource.
@@ -114,7 +114,7 @@ def cloudwatch_resource(
         def __init__(self, name: str):
             self.name = name
 
-        @operation(security=security)
+        @operation(policies=policies)
         async def post(self, metrics: Iterable[Metric]):
             metrics = deque(metrics)
             data = []

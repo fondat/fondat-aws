@@ -7,7 +7,7 @@ from fondat.aws import Client
 from fondat.codec import String, get_codec
 from fondat.error import InternalServerError
 from fondat.resource import resource, mutation
-from fondat.security import SecurityRequirement
+from fondat.security import Policy
 from typing import Annotated, Optional
 
 
@@ -19,7 +19,7 @@ def queue_resource(
     client: Client,
     queue_url: str,
     message_type: type,
-    security: Iterable[SecurityRequirement] = None,
+    policies: Iterable[Policy] = None,
 ):
     """
     Create SQS queue resource.
@@ -28,7 +28,7 @@ def queue_resource(
     • client: S3 client object
     • queue_url: the URL of the SQS queue
     • message_type: type of value transmitted in each message
-    • security: security requirements to apply to all operations
+    • security: security policies to apply to all operations
     """
 
     if client.service_name != "sqs":
@@ -40,7 +40,7 @@ def queue_resource(
     class Queue:
         """SQS queue resource."""
 
-        @mutation(security=security)
+        @mutation(policies=policies)
         async def send(self, message: message_type) -> None:
             """Send a message to the queue."""
             try:
@@ -49,7 +49,7 @@ def queue_resource(
                 _logger.error(e)
                 raise InternalServerError from e
 
-        @mutation(security=security)
+        @mutation(policies=policies)
         async def receive(
             self,
             wait_time_seconds: Annotated[int, "number of seconds to wait for a message"] = 0,

@@ -6,12 +6,33 @@ import fondat.http
 
 from base64 import b64encode, b64decode
 from collections.abc import Awaitable
+from fondat.error import InternalServerError
+from fondat.types import BytesStream
 
 
-def http_function(handler: Awaitable):
-    """Expose a Fondat HTTP request handler as an AWS Lambda function."""
+def async_function(coroutine):
+    """Return an AWS Lambda function that invokes an asynchronous coroutine function."""
 
-    async def coroutine(event, context):
+    def function(event, context):
+        coro = coroutine(event, context)
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+        if loop:
+            loop.run_until_complete(coro)
+        else:
+            return asyncio.run(coro)
+
+    return function
+
+
+def http_function(handler):
+    """Return an AWS Lambda function to invoke a Fondat HTTP request handler."""
+
+    async def handle(event, context):
+        if event["version"] != "2.0":
+            raise InternalServerError("expecting payload version: 2.0")
         with fondat.context.push(
             {
                 "context": "fondat.aws.lambda.http",
@@ -28,20 +49,23 @@ def http_function(handler: Awaitable):
             request.path = http["path"]
             request.version = version
             for key, value in event["headers"].items():
-                request.header[key] = value
-            for cookie in event["cookies"]:
+                request.headers[key] = value
+            for cookie in event.get("cookies", ()):
                 request.cookies.load(cookie)
-            for key, value in event["queryStringParameters"].items():
+            for key, value in event.get("queryStringParameters", {}).items():
                 request.query[key] = value
-            request.body = (
-                b64decode(event["body"]) if event["isBase64Encoded"] else event["body"].encode()
-            )
+            body = event.get("body")
+            if body:
+                request.body = BytesStream(
+                    b64decode(body) if event["isBase64Encoded"] else body.encode(),
+                    request.headers.get("content-length"),
+                )
             response = await handler(request)
             headers = response.headers
             return {
                 "isBase64Encoded": True,
                 "statusCode": response.status,
-                "multiValueHeaders": {k: headers.getall(k) for k in headers.keys()},
+                "headers": {k: ", ".join(headers.getall(k)) for k in headers.keys()},
                 "body": (
                     b64encode(b"".join([b async for b in response.body])).decode()
                     if response.body is not None
@@ -49,11 +73,4 @@ def http_function(handler: Awaitable):
                 ),
             }
 
-    def function(event, context):
-        coro = coroutine(event, context)
-        try:
-            asyncio.get_running_loop().run_until_complete(coro)
-        except RuntimeError:
-            return asyncio.run(coro)
-
-    return function
+    return async_function(handle)

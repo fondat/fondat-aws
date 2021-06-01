@@ -3,7 +3,7 @@
 import aiobotocore
 import dataclasses
 
-from fondat.types import datacls
+from fondat.data import datacls
 from typing import Annotated as A, Optional
 
 

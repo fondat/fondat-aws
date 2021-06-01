@@ -9,7 +9,7 @@ from fondat.aws import Client
 from fondat.codec import Binary, String
 from fondat.error import InternalServerError, NotFoundError
 from fondat.resource import resource, operation
-from fondat.security import SecurityRequirement
+from fondat.security import Policy
 from typing import Any
 
 
@@ -26,7 +26,7 @@ def bucket_resource(
     extension: str = None,
     compress: Any = None,
     encode_keys: bool = False,
-    security: Iterable[SecurityRequirement] = None,
+    policies: Iterable[Policy] = None,
 ):
     """
     Create S3 bucket resource.
@@ -40,7 +40,7 @@ def bucket_resource(
     • extenson: filename extension to use for each file (including dot)
     • compress: algorithm to compress and decompress content
     • encode_keys: URL encode and decode object keys
-    • security: security requirements to apply to all operations
+    • security: security policies to apply to all operations
     """
 
     if client.service_name != "s3":
@@ -63,7 +63,7 @@ def bucket_resource(
                 key = f"{folder}/{key}"
             self.key = key
 
-        @operation(security=security)
+        @operation(policies=policies)
         async def get(self) -> value_type:
             try:
                 response = await client.get_object(Bucket=bucket, Key=self.key)
@@ -78,7 +78,7 @@ def bucket_resource(
                 _logger.error(e)
                 raise InternalServerError from e
 
-        @operation(security=security)
+        @operation(policies=policies)
         async def put(self, value: value_type) -> None:
             body = value_codec.encode(value)
             if compress:
@@ -89,7 +89,7 @@ def bucket_resource(
                 _logger.error(e)
                 raise InternalServerError from e
 
-        @operation(security=security)
+        @operation(policies=policies)
         async def delete(self) -> None:
             try:
                 await client.delete_object(Bucket=bucket, Key=self.key)
@@ -111,7 +111,7 @@ def bucket_resource(
     class Bucket:
         """S3 bucket resource."""
 
-        @operation(security=security)
+        @operation(policies=policies)
         async def get(
             self, prefix: str = None, limit: int = None, cursor: bytes = None
         ) -> Page:
