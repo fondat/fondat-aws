@@ -1,21 +1,16 @@
 from email import policy
-from email.message import EmailMessage
-from email.parser import BytesParser
-import boto3
-from botocore.exceptions import ClientError
+from email.parser import Parser
 from string import Template
 
 import logging
 
 from collections.abc import Iterable
 from fondat.aws import Client
-from fondat.codec import String, get_codec
-from fondat.error import InternalServerError
 from fondat.resource import resource, mutation
 from fondat.security import Policy
 from fondat.data import datacls
 from email.utils import formataddr
-from typing import Annotated, Dict, List, Optional, Union
+from typing import Dict, Union
 
 
 _logger = logging.getLogger(__name__)
@@ -56,11 +51,11 @@ def ses_resource(
             self,
             email_from: Union[str, EmailRecipient],
             email_to: Union[str, EmailRecipient],
-            text_body: Union[str, Template],
+            text_body: Template,
             text_pram: Dict[str, str],
-        ) -> str:
+        ):
 
-            msg = BytesParser(policy=policy.default).parse(text_body)
+            msg = Parser(policy=policy.default).parsestr(text_body.safe_substitute(text_pram))
 
             return await client.send_email(
                 Destination={
@@ -72,7 +67,7 @@ def ses_resource(
                     "Body": {
                         "Text": {
                             "Charset": "UTF-8",
-                            "Data": text_body.substitute(text_pram),
+                            "Data": msg.get_body(preferencelist=("plain")).get_content(),
                         },
                     },
                     "Subject": {
@@ -82,3 +77,5 @@ def ses_resource(
                 },
                 Source=email_from.recipient_format(),
             )
+
+    return EmailResource()

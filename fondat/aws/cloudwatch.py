@@ -109,7 +109,7 @@ def cloudwatch_resource(
 
     @resource
     class NamespaceResource:
-        """ Create Namespace resource. """
+        """Create Namespace resource."""
 
         def __init__(self, name: str):
             self.name = name
@@ -149,7 +149,7 @@ def cloudwatch_resource(
 
     @resource
     class CloudWatchResource:
-        """ Create CloudWatch resource. """
+        """Create CloudWatch resource."""
 
         def namespace(self, name: str) -> NamespaceResource:
             return NamespaceResource(name)
