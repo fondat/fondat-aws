@@ -24,6 +24,20 @@ async def client():
 
 async def test_send(client):
 
+    test_str = """From: $test <$test>
+Subject: $test subject
+To: $test $test <$test>
+Content-Type: text/plain; charset='us-ascii'
+Content-Transfer-Encoding: 7bit
+
+Dear $test:
+
+This is a $test.
+
+Thank you,
+$test
+"""
+
     response = await ses_resource(client=client).send(
         email_from=EmailRecipient(
             email_address="test@test.io", first_name="First", last_name="Last"
@@ -31,21 +45,8 @@ async def test_send(client):
         email_to=EmailRecipient(
             email_address="test@test.io", first_name="First", last_name="Last"
         ),
-        text_body=Template(
-            "From: $test <$test> \
-            Subject: $test subject \
-            To: $test $test <$test> \
-            Content-Type: text/plain; charset='us-ascii' \
-            Content-Transfer-Encoding: 7bit \
-            \
-            Dear $test: \
-            \
-            This is a $test. \
-            \
-            Thank you, \
-            $test"
-        ),
+        text_body=Template(test_str),
         text_pram={"test": "test"},
     )
 
-    assert response['ResponseMetadata']["HTTPStatusCode"] == 200
+    assert response["ResponseMetadata"]["HTTPStatusCode"] == 200

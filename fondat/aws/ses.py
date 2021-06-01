@@ -1,5 +1,4 @@
-from email import policy
-from email.parser import Parser
+from email import message_from_string
 from string import Template
 
 import logging
@@ -55,7 +54,7 @@ def ses_resource(
             text_pram: Dict[str, str],
         ):
 
-            msg = Parser(policy=policy.default).parsestr(text_body.safe_substitute(text_pram))
+            msg = msg = message_from_string(text_body.safe_substitute(text_pram))
 
             return await client.send_email(
                 Destination={
@@ -66,12 +65,12 @@ def ses_resource(
                 Message={
                     "Body": {
                         "Text": {
-                            "Charset": "UTF-8",
-                            "Data": msg.get_body(preferencelist=("plain")).get_content(),
+                            "Charset": msg.get_charsets()[0],
+                            "Data": msg.get_payload(),
                         },
                     },
                     "Subject": {
-                        "Charset": "UTF-8",
+                        "Charset": msg.get_charsets()[0],
                         "Data": msg["Subject"],
                     },
                 },
