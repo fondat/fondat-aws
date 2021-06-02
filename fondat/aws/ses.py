@@ -9,8 +9,6 @@ from fondat.resource import resource, mutation
 from fondat.security import Policy
 from fondat.data import datacls
 from email.utils import formataddr
-from typing import Dict, Union
-
 
 _logger = logging.getLogger(__name__)
 
@@ -48,33 +46,18 @@ def ses_resource(
         @mutation(policies=policies)
         async def send(
             self,
-            email_from: Union[str, EmailRecipient],
-            email_to: Union[str, EmailRecipient],
-            text_body: Template,
-            text_pram: Dict[str, str],
+            email_from: str,
+            email_to: str,
+            template: str,
+            prams: dict,
         ):
 
-            msg = msg = message_from_string(text_body.safe_substitute(text_pram))
+            msg = message_from_string(Template(template).safe_substitute(prams))
 
-            return await client.send_email(
-                Destination={
-                    "ToAddresses": [
-                        email_to.recipient_format(),
-                    ],
-                },
-                Message={
-                    "Body": {
-                        "Text": {
-                            "Charset": msg.get_charsets()[0],
-                            "Data": msg.get_payload(),
-                        },
-                    },
-                    "Subject": {
-                        "Charset": msg.get_charsets()[0],
-                        "Data": msg["Subject"],
-                    },
-                },
-                Source=email_from.recipient_format(),
+            return await client.send_raw_email(
+                Source=email_from,
+                Destinations=[email_to],
+                RawMessage={"Data": msg.get_payload()},
             )
 
     return EmailResource()

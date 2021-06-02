@@ -39,14 +39,10 @@ $test
 """
 
     response = await ses_resource(client=client).send(
-        email_from=EmailRecipient(
-            email_address="test@test.io", first_name="First", last_name="Last"
-        ),
-        email_to=EmailRecipient(
-            email_address="test@test.io", first_name="First", last_name="Last"
-        ),
-        text_body=Template(test_str),
-        text_pram={"test": "test"},
+        email_from="test@test.io",
+        email_to="test@test.io",
+        template=test_str,
+        prams={"test": "test"},
     )
 
     assert response["ResponseMetadata"]["HTTPStatusCode"] == 200
