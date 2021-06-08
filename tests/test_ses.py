@@ -1,13 +1,15 @@
-from string import Template
 import pytest
 
+import asyncio
+import fondat.error
+
 from fondat.aws import Client, Config
-from fondat.aws.ses import EmailRecipient, ses_resource
+from fondat.aws.ses import ses_resource
+
 
 pytestmark = pytest.mark.asyncio
 
-# Run the following line before pytest
-# aws ses verify-email-identity --email-address test@test.io --region us-east-1 --profile localstack --endpoint-url=http://localhost:4566
+
 config = Config(
     endpoint_url="http://localhost:4566",
     aws_access_key_id="id",
@@ -16,33 +18,43 @@ config = Config(
 )
 
 
-@pytest.fixture(scope="function")
+verified_source = "source@test.io"
+
+
+@pytest.fixture(scope="module")
+def event_loop():
+    loop = asyncio.new_event_loop()
+    yield loop
+    loop.close()
+
+
+@pytest.fixture(scope="module")
 async def client():
     async with Client(service_name="ses", config=config) as client:
         yield client
 
 
-async def test_send(client):
+@pytest.fixture(scope="module")
+async def resource(client):
+    yield ses_resource(client)
 
-    test_str = """From: $test <$test>
-Subject: $test subject
-To: $test $test <$test>
-Content-Type: text/plain; charset='us-ascii'
-Content-Transfer-Encoding: 7bit
 
-Dear $test:
+@pytest.fixture(scope="module", autouse=True)
+async def setup_module(resource):
+    await resource.identities.post(verified_source)
+    yield
+    await resource.identities[verified_source].delete()
 
-This is a $test.
 
-Thank you,
-$test
-"""
+async def test_send_raw_verified_identity(resource, setup_module):
+    await resource.send_raw_email(verified_source, "destination@test.io", b"message")
 
-    response = await ses_resource(client=client).send(
-        email_from="test@test.io",
-        email_to="test@test.io",
-        template=test_str,
-        prams={"test": "test"},
-    )
 
-    assert response["ResponseMetadata"]["HTTPStatusCode"] == 200
+async def test_send_unverified_identity(resource):
+    with pytest.raises(fondat.error.BadRequestError):
+        await resource.send_raw_email("unverified@test.io", "destination@test.io", b"message")
+
+
+async def test_verify_delete(resource):
+    await resource.identities.post("verify_delete@test.io")
+    await resource.identities["verify_delete@test.io"].delete()

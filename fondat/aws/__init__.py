@@ -3,7 +3,9 @@
 import aiobotocore
 import dataclasses
 
+from botocore.exceptions import ClientError
 from fondat.data import datacls
+from fondat.error import error_for_status
 from typing import Annotated as A, Optional
 
 
@@ -65,3 +67,17 @@ class Client:
 
     async def __aexit__(self, exc_type, exc_value, traceback):
         await self.close()
+
+
+from contextlib import contextmanager
+
+
+@contextmanager
+def wrap_client_error():
+    """Catch any raised ClientError and reraise as a Fondat error."""
+    try:
+        yield
+    except ClientError as ce:
+        status = ce.response["ResponseMetadata"]["HTTPStatusCode"]
+        message = ce.response["Error"]["Message"]
+        raise error_for_status(status)(message)
