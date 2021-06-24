@@ -4,7 +4,7 @@ import logging
 
 from collections.abc import Iterable
 from fondat.aws import Client, wrap_client_error
-from fondat.http import AsBody, InBody
+from fondat.http import AsBody
 from fondat.resource import operation, resource, mutation
 from fondat.security import Policy
 from typing import Annotated, Union

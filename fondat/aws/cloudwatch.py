@@ -1,17 +1,12 @@
 """Fondat module for AWS CloudWatch."""
 
-import aiobotocore
-import fondat.codec
-import fondat.pagination
 import logging
 
 from collections import deque
 from collections.abc import Iterable
 from datetime import datetime
 from fondat.aws import Client
-from fondat.codec import Binary, String
 from fondat.data import datacls
-from fondat.error import InternalServerError, NotFoundError
 from fondat.resource import resource, operation, mutation
 from fondat.security import Policy
 from typing import Any, Literal, Optional, Union

@@ -7,22 +7,14 @@ import fondat.http
 from base64 import b64encode, b64decode
 from collections.abc import Awaitable
 from fondat.error import InternalServerError
-from fondat.types import BytesStream
+from fondat.stream import BytesStream
 
 
 def async_function(coroutine):
     """Return an AWS Lambda function that invokes an asynchronous coroutine function."""
 
     def function(event, context):
-        coro = coroutine(event, context)
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            loop = None
-        if loop:
-            loop.run_until_complete(coro)
-        else:
-            return asyncio.run(coro)
+        return asyncio.run(coroutine(event, context))
 
     return function
 
