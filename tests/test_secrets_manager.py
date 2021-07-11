@@ -35,12 +35,7 @@ async def resource(client):
     yield secretsmanager_resource(client)
 
 
-@pytest.fixture(scope="module", autouse=True)
-async def setup_module(resource):
-    await resource.secrets.post("test_secret")
-    yield
-    await resource.secrets["test_secret"].delete()
-
-
-async def test_get_secret(resource, setup_module):
+async def test_get_secret(resource):
+    await resource.create("test_secret", "secret string")
     await resource.get_secret("test_secret")
+    await resource.delete("test_secret")

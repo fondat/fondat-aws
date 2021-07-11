@@ -3,13 +3,29 @@
 import logging
 
 from collections.abc import Iterable
-from fondat.aws import Client
+from typing import Optional
+from fondat.aws import Client, wrap_client_error
 from fondat.resource import operation, resource, mutation
 from fondat.security import Policy
-from botocore.exceptions import ClientError
-
+from fondat.data import datacls
 
 _logger = logging.getLogger(__name__)
+
+
+@datacls
+class Secret:
+    """
+    Secret dataclass.
+    Attributes:
+    • ARN: count of measured values
+    • Name: sum of all measured values
+    • VersionId: minimum measured value
+    """
+
+    ARN: str
+    Name: str
+    SecretString: Optional[str]
+    SecretBinary: Optional[bytes]
 
 
 def secretsmanager_resource(
@@ -28,64 +44,47 @@ def secretsmanager_resource(
         raise TypeError("expecting Secrets Manager client")
 
     @resource
-    class Secret:
-        """The secret object."""
-
-        def __init__(self, secret: str):
-            self.secret = secret
-
-        @operation(policies=policies)
-        async def delete(self):
-            """Delete the secret from list of secrets."""
-            await client.delete_secret(SecretId=self.secret)
-
-    @resource
-    class Secrets:
-        """Secrets list for Amazon Secrets Manager."""
-
-        @operation(policies=policies)
-        async def post(self, secret):
-            """Add a secret to list of secrets for secrets manager"""
-            await client.create_secret(Name=secret)
-
-        def __getitem__(self, secret) -> Secret:
-            return Secret(secret)
-
-    @resource
     class SecretsManagerResource:
         """Amazon Secrets Manager resource."""
 
         @mutation(policies=policies)
-        async def get_secret(self, secret_name: str):
+        async def create(self, secret, secret_string: Optional[str]):
+            """Add a secret to secrets manager"""
+            await client.create_secret(Name=secret, SecretString=secret_string)
+
+        @operation(policies=policies)
+        async def put(self, secret, secret_string: Optional[str]):
+            """Update a secret in the secrets manager"""
+            await client.put_secret_value(SecretId=secret, SecretString=secret_string)
+
+        @operation(policies=policies)
+        async def delete(self, secret):
+            """Delete the secret."""
+            await client.delete_secret(SecretId=secret)
+
+        @mutation(policies=policies)
+        async def get_secret(self, secret_name: str) -> Secret:
             """
             Retrieve a secret from Secrets Manager.
-            Reference: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/secrets-manager.html
 
             Parameters:
             • secret_name: The name of the secret or secret Amazon Resource Names (ARNs).
             """
 
-            try:
+            with wrap_client_error():
                 get_secret_value_response = await client.get_secret_value(SecretId=secret_name)
-            except ClientError as e:
-                if e.response["Error"]["Code"] == "ResourceNotFoundException":
-                    print("The requested secret " + secret_name + " was not found")
-                elif e.response["Error"]["Code"] == "InvalidRequestException":
-                    print("The request was invalid due to:", e)
-                elif e.response["Error"]["Code"] == "InvalidParameterException":
-                    print("The request had invalid params:", e)
-                elif e.response["Error"]["Code"] == "DecryptionFailure":
-                    print(
-                        "The requested secret can't be decrypted using the provided KMS key:", e
-                    )
-                elif e.response["Error"]["Code"] == "InternalServiceError":
-                    print("An error occurred on service side:", e)
-            else:
-                if "SecretString" in get_secret_value_response:
-                    return get_secret_value_response["SecretString"]
-                else:
-                    return get_secret_value_response["SecretBinary"]
 
-        secrets = Secrets()
+                if "SecretString" in get_secret_value_response:
+                    return Secret(
+                        ARN=get_secret_value_response["ARN"],
+                        Name=get_secret_value_response["Name"],
+                        SecretString=get_secret_value_response["SecretString"],
+                    )
+                else:
+                    return Secret(
+                        ARN=get_secret_value_response["ARN"],
+                        Name=get_secret_value_response["Name"],
+                        SecretBinary=get_secret_value_response["SecretBinary"],
+                    )
 
     return SecretsManagerResource()
