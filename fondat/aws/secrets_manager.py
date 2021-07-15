@@ -44,9 +44,7 @@ def secretsmanager_resource(
         raise TypeError("expecting Secrets Manager client")
 
     @resource
-    class SecretsManagerResource:
-        """Amazon Secrets Manager resource."""
-
+    class SecretsResource:
         @mutation(policies=policies)
         async def create(self, secret, secret_string: Optional[str]):
             """Add a secret to secrets manager"""
@@ -61,6 +59,10 @@ def secretsmanager_resource(
         async def delete(self, secret):
             """Delete the secret."""
             await client.delete_secret(SecretId=secret)
+
+    @resource
+    class SecretsManagerResource:
+        """Amazon Secrets Manager resource."""
 
         @mutation(policies=policies)
         async def get_secret(self, secret_name: str) -> Secret:
@@ -86,5 +88,7 @@ def secretsmanager_resource(
                         Name=get_secret_value_response["Name"],
                         SecretBinary=get_secret_value_response["SecretBinary"],
                     )
+
+        secretsresource = SecretsResource()
 
     return SecretsManagerResource()

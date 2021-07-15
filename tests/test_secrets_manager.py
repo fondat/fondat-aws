@@ -36,6 +36,6 @@ async def resource(client):
 
 
 async def test_get_secret(resource):
-    await resource.create("test_secret", "secret string")
+    await resource.secretsresource.create("test_secret", "secret string")
     await resource.get_secret("test_secret")
-    await resource.delete("test_secret")
+    await resource.secretsresource.delete("test_secret")
